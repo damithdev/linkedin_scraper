@@ -1,9 +1,12 @@
 # Import necessary packages for web scraping and logging
+from datetime import datetime
 import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import pandas as pd
 import random
@@ -40,15 +43,15 @@ def scrape_linkedin_jobs(job_title: str, location: str, pages: int = None) -> li
     # Sets the pages to scrape if not provided
     pages = pages or 1
 
-    # Set up the Selenium web driver
-    driver = webdriver.Chrome("chromedriver.exe")
 
     # Set up Chrome options to maximize the window
     options = webdriver.ChromeOptions()
     options.add_argument("--start-maximized")
 
+    service = Service(ChromeDriverManager().install())
+
     # Initialize the web driver with the Chrome options
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(service=service, options=options)
 
     # Navigate to the LinkedIn job search page with the given job title and location
     driver.get(
@@ -68,7 +71,7 @@ def scrape_linkedin_jobs(job_title: str, location: str, pages: int = None) -> li
             # Wait for the "Show more" button to be present on the page
             element = WebDriverWait(driver, 5).until(
                 EC.presence_of_element_located(
-                    (By.XPATH, "/html/body/div[1]/div/main/section[2]/button")
+                    (By.XPATH, "/html/body/div[1]/div/main/section/button")
                 )
             )
             # Click on the "Show more" button
@@ -80,7 +83,7 @@ def scrape_linkedin_jobs(job_title: str, location: str, pages: int = None) -> li
             logging.info("Show more button not found, retrying...")
 
         # Wait for a random amount of time before scrolling to the next page
-        time.sleep(random.choice(list(range(3, 7))))
+        time.sleep(random.choice(list(range(10, 20))))
 
     # Scrape the job postings
     jobs = []
@@ -111,7 +114,7 @@ def scrape_linkedin_jobs(job_title: str, location: str, pages: int = None) -> li
             driver.get(apply_link)
 
             # Sleeping randomly
-            time.sleep(random.choice(list(range(5, 11))))
+            time.sleep(random.choice(list(range(10, 20))))
 
             # Use try-except block to handle exceptions when retrieving job description
             try:
@@ -162,7 +165,7 @@ def scrape_linkedin_jobs(job_title: str, location: str, pages: int = None) -> li
     return jobs
 
 
-def save_job_data(data: dict) -> None:
+def save_job_data(data: dict, filename : str) -> None:
     """
     Save job data to a CSV file.
 
@@ -172,16 +175,25 @@ def save_job_data(data: dict) -> None:
     Returns:
         None
     """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Create a pandas DataFrame from the job data dictionary
     df = pd.DataFrame(data)
 
     # Save the DataFrame to a CSV file without including the index column
-    df.to_csv("jobs.csv", index=False)
+    df.to_csv(f"Jobs/{filename}_{timestamp}.csv", index=False)
 
     # Log a message indicating how many jobs were successfully scraped and saved to the CSV file
     logging.info(f"Successfully scraped {len(data)} jobs and saved to jobs.csv")
 
+jobs_labels = ["Data Scientist","Digital Marketing","Software Engineer","Project Manager","Accountant","Human Resource","Sales","Graphic Designer","administrative assistant","Quality Assurance","Nurse","cook","attorney","dentist"]
 
-data = scrape_linkedin_jobs("Data analyst", "US")
-save_job_data(data)
+for title in jobs_labels:
+    jobs = scrape_linkedin_jobs(title, "Sri Lanka", 1)
+    save_job_data(jobs,title)
+    print("Completed",title)
+    time.sleep(random.choice(list(range(70, 120))))
+
+#
+# job_titles = ['Accountant','Engineer','Data Scientist','Software Engineer','Sales','Nurse','Project Manager','Administrative Assistant']
+
